@@ -28,6 +28,11 @@
 			var camera, controls, scene, renderer;
 			var objects = [], plane;
 
+			var ball;
+
+			var ballVx=15, ballVy=10, ballVz=-10;
+			var ballRadius=100;
+
 			var raycaster = new THREE.Raycaster();
 			var mouse = new THREE.Vector2(),
 			offset = new THREE.Vector3(),
@@ -119,6 +124,14 @@
 				}
 
 				scene.add( plane );
+
+
+				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
+				var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+				ball = new THREE.Mesh( geometry, material );
+				ball.position=
+				scene.add( ball );
+
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setClearColor( 0xf0f0f0 );
@@ -258,6 +271,31 @@
 			function animate() {
 
 				requestAnimationFrame( animate );
+
+				ball.position.z+=ballVz;
+				ball.position.x+=ballVx;
+				ball.position.y+=ballVy;
+
+				//keep the ball in the bounding box
+				if(ball.position.x+ballRadius>=2000){
+					ballVx=-ballVx;
+				}
+
+				if(ball.position.y+ballRadius>=2000){
+					ballVy=-ballVy;
+				}
+
+
+				if(ball.position.x-ballRadius<=-2000){
+					ballVx=-ballVx;
+				}
+
+				if(ball.position.y-ballRadius<=-2000){
+					ballVy=-ballVy;
+				}
+		
+
+
 
 				render();
 				stats.update();
