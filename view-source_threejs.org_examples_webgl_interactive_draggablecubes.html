@@ -104,7 +104,32 @@
 					new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
 					new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
 				);
-				plane.visible = true;
+				plane.visible = false;
+
+
+				//Draw the playing field lines
+
+				var material = new THREE.LineBasicMaterial({
+					color: 0x0000ff
+				});
+
+				var geometry = new THREE.Geometry();
+					geometry.vertices.push(
+						new THREE.Vector3( -2000, -2000, -2000 ),
+						new THREE.Vector3( 2000, -2000, -2000 ),
+						new THREE.Vector3( 2000, 2000, -2000 ),
+						new THREE.Vector3( -2000, 2000, -2000 ),
+						new THREE.Vector3( -2000, -2000, -2000 )
+				);
+
+				for(var i=0;i<40;i++){
+					
+
+					var line = new THREE.Line( geometry, material );
+					line.position.z=-i*50;
+					scene.add( line );
+				}
+
 				scene.add( plane );
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -138,6 +163,23 @@
 				//
 
 				window.addEventListener( 'resize', onWindowResize, false );
+
+				var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+
+				var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+				var intersects = raycaster.intersectObjects( objects );
+
+				if ( intersects.length > 0 ) {
+
+					controls.enabled = false;
+
+					SELECTED = intersects[ 0 ].object;
+
+					var intersects = raycaster.intersectObject( plane );
+					offset.copy( intersects[ 0 ].point ).sub( plane.position );
+				}
+
 
 			}
 
@@ -202,25 +244,6 @@
 			function onDocumentMouseDown( event ) {
 
 				event.preventDefault();
-
-				var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
-
-				var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
-
-				var intersects = raycaster.intersectObjects( objects );
-
-				if ( intersects.length > 0 ) {
-
-					controls.enabled = false;
-
-					SELECTED = intersects[ 0 ].object;
-
-					var intersects = raycaster.intersectObject( plane );
-					offset.copy( intersects[ 0 ].point ).sub( plane.position );
-
-					container.style.cursor = 'move';
-
-				}
 
 			}
 
