@@ -32,9 +32,9 @@
 			var playerPaddle;
 			var opponentPaddle;
 
-			var paddleWidth= 400, paddleLength=200, paddleDepth=10;
+			var paddleWidth= 400, paddleLength=200, paddleDepth=3;
 
-			var ballVx=15, ballVy=10, ballVz=10;
+			var ballVx=0, ballVy=0, ballVz=10;
 			var ballRadius=100;
 
 			var edgeSize = 2000;
@@ -92,6 +92,11 @@
 
 				playerPaddle.castShadow = true;
 				playerPaddle.receiveShadow = true;
+				playerPaddle.geometry.computeBoundingBox ();
+
+				playerPaddle.sizeX = paddleWidth/2;
+				playerPaddle.sizeY = paddleLength/2;
+				playerPaddle.sizeZ = paddleDepth/2;
 
 				opponentPaddle.position.z=-3000;
 
@@ -134,12 +139,16 @@
 				scene.add( plane );
 
 
-				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
+				//var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
+				var geometry = new THREE.BoxGeometry( ballRadius, ballRadius,ballRadius );
 				var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 				ball = new THREE.Mesh( geometry, material );
 				ball.position.x = 0;
 				ball.position.y= 0;
 				ball.position.z=-500;
+				ball.sizeX = ballRadius/2;
+				ball.sizeY = ballRadius/2;
+				ball.sizeZ = ballRadius/2;
 				scene.add( ball );
 
 
@@ -147,6 +156,7 @@
 				renderer.setClearColor( 0xf0f0f0 );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.sortObjects = true;
 
 				renderer.shadowMapEnabled = true;
 				renderer.shadowMapType = THREE.PCFShadowMap;
@@ -290,11 +300,15 @@
 
 				var ballPoint = new THREE.Vector3(ball.position.x,ball.position.y,ball.position.z+ballRadius);
 
-				if(ballPoint.x<playerPaddle.position.x+paddleWidth
+				/*if(ballPoint.x<playerPaddle.position.x+paddleWidth
 					&& ballPoint.x>playerPaddle.position.x
 					&&ballPoint.y<playerPaddle.position.y+paddleLength
 					&& ballPoint.y>playerPaddle.position.y
 					&&ballPoint.z>playerPaddle.position.z){
+					ballVz=-ballVz;
+				}*/
+				
+				if (intersectsWith(ball,playerPaddle)){
 					ballVz=-ballVz;
 				}
 
@@ -332,6 +346,27 @@
 				renderer.render( scene, camera );
 
 			}
+
+
+			function intersectsWith(a,b) {
+
+
+		     //check the X axis
+			   if(Math.abs(a.position.x - b.position.x) < a.sizeX + b.sizeX)
+			   {
+			      //check the Y axis
+			      if(Math.abs(a.position.y - b.position.y) < a.sizeY + b.sizeY)
+			      {
+			          //check the Z axis
+			          if(Math.abs(a.position.z - b.position.z) < a.sizeZ + b.sizeZ)
+			          {
+			             return true;
+			          }
+			      }
+			   }
+
+			   return false;
+		}
 
 		</script>
 
