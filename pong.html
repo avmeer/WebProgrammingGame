@@ -34,7 +34,7 @@
 
 			var paddleWidth= 400, paddleLength=200, paddleDepth=3;
 
-			var ballVx=0, ballVy=0, ballVz=10;
+			var ballVx=10, ballVy=15, ballVz=10;
 			var ballRadius=100;
 
 			var edgeSize = 2000;
@@ -88,7 +88,7 @@
 
 				playerPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0xff0000, opacity: 0.7, transparent: true } ) );
 
-				opponentPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0x00ff00 } ) );
+				opponentPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0x0066ff } ) );
 
 				playerPaddle.castShadow = true;
 				playerPaddle.receiveShadow = true;
@@ -99,6 +99,10 @@
 				playerPaddle.sizeZ = paddleDepth/2;
 
 				opponentPaddle.position.z=-3000;
+
+				opponentPaddle.sizeX = paddleWidth/2;
+				opponentPaddle.sizeY = paddleLength/2;
+				opponentPaddle.sizeZ = paddleDepth/2;
 
 				scene.add( playerPaddle );
 				scene.add( opponentPaddle );
@@ -162,14 +166,6 @@
 				renderer.shadowMapType = THREE.PCFShadowMap;
 
 				container.appendChild( renderer.domElement );
-
-				var info = document.createElement( 'div' );
-				info.style.position = 'absolute';
-				info.style.top = '10px';
-				info.style.width = '100%';
-				info.style.textAlign = 'center';
-				info.innerHTML = '<a href="http://threejs.org" target="_blank">three.js</a> webgl - draggable cubes';
-				container.appendChild( info );
 
 				stats = new Stats();
 				stats.domElement.style.position = 'absolute';
@@ -308,7 +304,7 @@
 					ballVz=-ballVz;
 				}*/
 				
-				if (intersectsWith(ball,playerPaddle)){
+				if (intersectsWith(ball,playerPaddle) || intersectsWith(ball,opponentPaddle)){
 					ballVz=-ballVz;
 				}
 
