@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - draggable cubes</title>
+		<title>Super awesome game</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -29,9 +29,15 @@
 			var objects = [], plane;
 
 			var ball;
+			var playerPaddle;
+			var opponentPaddle;
 
-			var ballVx=15, ballVy=10, ballVz=-10;
+			var paddleWidth= 400, paddleLength=200, paddleDepth=10;
+
+			var ballVx=15, ballVy=10, ballVz=10;
 			var ballRadius=100;
+
+			var edgeSize = 2000;
 
 			var raycaster = new THREE.Raycaster();
 			var mouse = new THREE.Vector2(),
@@ -78,20 +84,22 @@
 
 				scene.add( light );
 
-				var geometry = new THREE.BoxGeometry( 200, 100, 10 );
+				var geometry = new THREE.BoxGeometry( paddleWidth, paddleLength, paddleDepth );
 
-				for ( var i = 0; i < 1; i ++ ) {
+				playerPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0xff0000, opacity: 0.7, transparent: true } ) );
 
-					var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+				opponentPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0x00ff00 } ) );
 
-					object.castShadow = true;
-					object.receiveShadow = true;
+				playerPaddle.castShadow = true;
+				playerPaddle.receiveShadow = true;
 
-					scene.add( object );
+				opponentPaddle.position.z=-3000;
 
-					objects.push( object );
+				scene.add( playerPaddle );
+				scene.add( opponentPaddle );
 
-				}
+				objects.push( playerPaddle );
+
 
 				plane = new THREE.Mesh(
 					new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
@@ -108,14 +116,14 @@
 
 				var geometry = new THREE.Geometry();
 					geometry.vertices.push(
-						new THREE.Vector3( -2000, -2000, -2000 ),
-						new THREE.Vector3( 2000, -2000, -2000 ),
-						new THREE.Vector3( 2000, 2000, -2000 ),
-						new THREE.Vector3( -2000, 2000, -2000 ),
-						new THREE.Vector3( -2000, -2000, -2000 )
+						new THREE.Vector3( -edgeSize, -edgeSize, -edgeSize ),
+						new THREE.Vector3( edgeSize, -edgeSize, -edgeSize ),
+						new THREE.Vector3( edgeSize, edgeSize, -edgeSize ),
+						new THREE.Vector3( -edgeSize, edgeSize, -edgeSize ),
+						new THREE.Vector3( -edgeSize, -edgeSize, -edgeSize )
 				);
 
-				for(var i=0;i<40;i++){
+				for(var i=0;i<50;i++){
 					
 
 					var line = new THREE.Line( geometry, material );
@@ -129,7 +137,9 @@
 				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
 				var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 				ball = new THREE.Mesh( geometry, material );
-				ball.position=
+				ball.position.x = 0;
+				ball.position.y= 0;
+				ball.position.z=-500;
 				scene.add( ball );
 
 
@@ -137,7 +147,6 @@
 				renderer.setClearColor( 0xf0f0f0 );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.sortObjects = false;
 
 				renderer.shadowMapEnabled = true;
 				renderer.shadowMapType = THREE.PCFShadowMap;
@@ -276,24 +285,38 @@
 				ball.position.x+=ballVx;
 				ball.position.y+=ballVy;
 
+				opponentPaddle.position.x=ball.position.x;
+				opponentPaddle.position.y=ball.position.y;
+
+				var ballPoint = new THREE.Vector3(ball.position.x,ball.position.y,ball.position.z+ballRadius);
+
+				if(ballPoint.x<playerPaddle.position.x+paddleWidth
+					&& ballPoint.x>playerPaddle.position.x
+					&&ballPoint.y<playerPaddle.position.y+paddleLength
+					&& ballPoint.y>playerPaddle.position.y
+					&&ballPoint.z>playerPaddle.position.z){
+					ballVz=-ballVz;
+				}
+
+
 				//keep the ball in the bounding box
-				if(ball.position.x+ballRadius>=2000){
+				if(ball.position.x+ballRadius>=edgeSize){
 					ballVx=-ballVx;
 				}
 
-				if(ball.position.y+ballRadius>=2000){
+				if(ball.position.y+ballRadius>=edgeSize){
 					ballVy=-ballVy;
 				}
 
 
-				if(ball.position.x-ballRadius<=-2000){
+				if(ball.position.x-ballRadius<=-edgeSize){
 					ballVx=-ballVx;
 				}
 
-				if(ball.position.y-ballRadius<=-2000){
+				if(ball.position.y-ballRadius<=-edgeSize){
 					ballVy=-ballVy;
 				}
-		
+
 
 
 
