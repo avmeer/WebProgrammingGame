@@ -39,7 +39,7 @@
 
     0%   {background-color: rgba(65,0,0,.05);}
     25%  {background-color: rgba(65,0,0,.08);}
-    50%  {background-color: rgba(65,0,0,.2);}
+    50%  {background-color: rgba(65,0,0,.1);}
     75%  {background-color: rgba(65,0,0,.08);}
     100% {background-color: rgba(65,0,0,.05);}
 }
