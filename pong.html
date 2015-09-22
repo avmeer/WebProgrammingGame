@@ -31,13 +31,17 @@
 			var ball;
 			var playerPaddle;
 			var opponentPaddle;
+			var ballStopped=true;
+			
+			var playerScore, opponentScore;
 
 			var paddleWidth= 400, paddleLength=200, paddleDepth=3;
-
-			var ballVx=10, ballVy=15, ballVz=10;
+			
+			
+			var ballVx=getRandomInt(-15,15), ballVy=getRandomInt(-15,15), ballVz=-10;
 			var ballRadius=100;
 
-			var edgeSize = 2000;
+			var edgeSize = 1500;
 
 			var raycaster = new THREE.Raycaster();
 			var mouse = new THREE.Vector2(),
@@ -52,8 +56,8 @@
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
-				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.z = 1000;
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z =3400;
 
 				controls = new THREE.TrackballControls( camera );
 				controls.rotateSpeed = 1.0;
@@ -111,7 +115,7 @@
 
 
 				plane = new THREE.Mesh(
-					new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
+					new THREE.PlaneBufferGeometry( 2500, 2500, 8, 8 ),
 					new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
 				);
 				plane.visible = false;
@@ -132,19 +136,19 @@
 						new THREE.Vector3( -edgeSize, -edgeSize, -edgeSize )
 				);
 
-				for(var i=0;i<50;i++){
+				for(var i=0;i<30;i++){
 					
 
 					var line = new THREE.Line( geometry, material );
-					line.position.z=(-i*50) +1000;
+					line.position.z=(-i*70) +1000;
 					scene.add( line );
 				}
 
 				scene.add( plane );
 
 
-				//var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
-				var geometry = new THREE.BoxGeometry( ballRadius, ballRadius,ballRadius );
+				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
+				//var geometry = new THREE.BoxGeometry( ballRadius, ballRadius,ballRadius );
 				var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 				ball = new THREE.Mesh( geometry, material );
 				ball.position.x = 0;
@@ -258,7 +262,7 @@
 			}
 
 			function onDocumentMouseDown( event ) {
-
+				ballStopped=false;
 				event.preventDefault();
 
 			}
@@ -286,13 +290,28 @@
 			function animate() {
 
 				requestAnimationFrame( animate );
-
-				ball.position.z+=ballVz;
-				ball.position.x+=ballVx;
-				ball.position.y+=ballVy;
-
-				opponentPaddle.position.x=ball.position.x;
-				opponentPaddle.position.y=ball.position.y;
+				
+				if(!ballStopped){
+					ball.position.z+=ballVz;
+					ball.position.x+=ballVx;
+					ball.position.y+=ballVy;
+				}
+				else{
+					ball.position.z=playerPaddle.position.z-ballRadius-5;
+					ball.position.x=playerPaddle.position.x;
+					ball.position.y=playerPaddle.position.y;
+				}
+				
+				if(ball.position.x>opponentPaddle.position.x)
+					opponentPaddle.position.x+=getRandomInt(5,10);
+				else{
+					opponentPaddle.position.x-=getRandomInt(5,10);
+				}
+				if(ball.position.y>opponentPaddle.position.y)
+					opponentPaddle.position.y+=getRandomInt(5,10);
+				else{
+					opponentPaddle.position.y-=getRandomInt(5,10);
+				}
 
 				var ballPoint = new THREE.Vector3(ball.position.x,ball.position.y,ball.position.z+ballRadius);
 
@@ -327,7 +346,28 @@
 					ballVy=-ballVy;
 				}
 
-
+				if(ball.position.z>playerPaddle.position.z+ballRadius+10){
+					opponentScore++;
+					ball.position.z=playerPaddle.position.z-ballRadius;
+					ball.position.x=playerPaddle.position.x;
+					ball.position.y=playerPaddle.position.y;
+					ballVz=getRandomInt(5,15);
+					ballVy=getRandomInt(-15,15);
+					ballVx=getRandomInt(-15,15);
+					ballStopped=true;
+				}
+				
+				if(ball.position.z<opponentPaddle.position.z-ballRadius){
+					
+					ball.position.z=opponentPaddle.position.z+ballRadius+30;
+					ball.position.x=opponentPaddle.position.x;
+					ball.position.y=opponentPaddle.position.y;
+					
+					
+					ballVz=-getRandomInt(5,15);
+					ballVy=getRandomInt(-15,15);
+					ballVx=getRandomInt(-15,15);
+				}
 
 
 				render();
@@ -362,6 +402,10 @@
 			   }
 
 			   return false;
+		}
+		
+		function getRandomInt(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
 		}
 
 		</script>
