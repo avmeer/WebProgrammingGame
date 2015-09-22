@@ -25,15 +25,18 @@
 		<script>
 
 			var container, stats;
-			var camera, controls, scene, renderer;
+			var camera, controls, scene, renderer,cameraOrtho;
+			var sceneOrtho = new THREE.Scene();
 			var objects = [], plane;
+			
+			var scoreSprite;
 
 			var ball;
 			var playerPaddle;
 			var opponentPaddle;
 			var ballStopped=true;
 			
-			var playerScore, opponentScore;
+			var playerScore=0, opponentScore=0;
 
 			var paddleWidth= 400, paddleLength=200, paddleDepth=3;
 			
@@ -67,6 +70,20 @@
 				controls.noPan = false;
 				controls.staticMoving = true;
 				controls.dynamicDampingFactor = 0.3;
+				
+				
+				
+				cameraOrtho = new THREE.OrthographicCamera(
+				window.innerWidth / -2,
+				window.innerWidth / 2,
+				window.innerHeight / 2,
+				window.innerHeight / -2,
+				1,
+				1000);
+				cameraOrtho.position.z = 1;
+				cameraOrtho.position.x = 0;
+				cameraOrtho.position.y = 0;
+
 
 				scene = new THREE.Scene();
 
@@ -145,6 +162,8 @@
 				}
 
 				scene.add( plane );
+				
+				updateScore();
 
 
 				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
@@ -167,6 +186,7 @@
 				renderer.sortObjects = true;
 
 				renderer.shadowMapEnabled = true;
+				renderer.autoClear = false;
 				renderer.shadowMapType = THREE.PCFShadowMap;
 
 				container.appendChild( renderer.domElement );
@@ -207,6 +227,13 @@
 
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
+				
+				cameraOrtho.left = -window.innerWidth / 2;
+				cameraOrtho.right = window.innerWidth / 2;
+				cameraOrtho.top = window.innerHeight / 2;
+				cameraOrtho.bottom = -window.innerHeight / 2;
+
+				cameraOrtho.updateProjectionMatrix();
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
@@ -348,6 +375,7 @@
 
 				if(ball.position.z>playerPaddle.position.z+ballRadius+10){
 					opponentScore++;
+					updateScore();
 					ball.position.z=playerPaddle.position.z-ballRadius;
 					ball.position.x=playerPaddle.position.x;
 					ball.position.y=playerPaddle.position.y;
@@ -358,6 +386,8 @@
 				}
 				
 				if(ball.position.z<opponentPaddle.position.z-ballRadius){
+					playerScore++;
+					updateScore();
 					
 					ball.position.z=opponentPaddle.position.z+ballRadius+30;
 					ball.position.x=opponentPaddle.position.x;
@@ -380,6 +410,7 @@
 				controls.update();
 
 				renderer.render( scene, camera );
+				renderer.render(sceneOrtho, cameraOrtho);
 
 			}
 
@@ -407,6 +438,139 @@
 		function getRandomInt(min, max) {
 			return Math.floor(Math.random() * (max - min + 1)) + min;
 		}
+		
+		
+		function makeTextSprite(message, parameters) {
+		
+			function wrapText(text, x, y, maxWidth, lineHeight) {
+			var lines = text.split("\n");
+
+			for (var i = 0; i < lines.length; i++) {
+				var words = lines[i].split(' ');
+				var line = '';
+
+				for (var n = 0; n < words.length; n++) {
+					var testLine = line + words[n] + ' ';
+					var metrics = this.measureText(testLine);
+					var testWidth = metrics.width;
+
+					if (testWidth > maxWidth && n > 0) {
+						this.fillText(line, x, y);
+						line = words[n] + ' ';
+						y += lineHeight;
+					} else {
+						line = testLine;
+					}
+				}
+
+				this.fillText(line, x, y);
+				y += lineHeight;
+			}
+		}
+		// Need this function for creating multi-line text sprites.
+		CanvasRenderingContext2D.prototype.wrapText = wrapText;
+		
+		
+		
+		
+		if (parameters === undefined) parameters = {};
+		var fontface = parameters.hasOwnProperty("fontface") ?
+			parameters["fontface"] : "Arial";
+		var fontsize = parameters.hasOwnProperty("fontsize") ?
+			parameters["fontsize"] : 30;
+		var size = parameters.hasOwnProperty("size") ?
+			parameters["size"] : 1024;
+		var textColor = parameters.hasOwnProperty("textColor") ?
+			parameters["textColor"] : {
+				r: 0,
+				g: 0,
+				b: 0,
+				a: 1.0
+			};
+		var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+			parameters["backgroundColor"] : {
+				r: 255,
+				g: 250,
+				b: 200,
+				a: 0.8
+			};
+
+		var canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		var context = canvas.getContext('2d');
+		context.font = fontsize + "px " + fontface;
+
+		// Draw background rectangle
+		//find the size of our text to draw the rectangle around
+		var lines = message.split("\n");
+		var lineHeight = fontsize;
+		var maxTextWidth = 0;
+		lines.forEach(function (line) {
+			var textWidth = context.measureText(line).width;
+			if (textWidth > maxTextWidth) {
+				maxTextWidth = textWidth;
+			}
+		});
+		//set the color to the input
+		context.fillStyle = "rgba(" +
+			backgroundColor.r + "," +
+			backgroundColor.g + "," +
+			backgroundColor.b + "," +
+			backgroundColor.a + ")";
+
+		context.fillRect(0.5 * size - 15,
+			0.5 * size - fontsize - 15,
+			maxTextWidth + 30,
+			lines.length * lineHeight + 30);
+
+		context.textAlign = 'left';
+		context.fillStyle = "rgba(" +
+			textColor.r + ", " +
+			textColor.g + ", " +
+			textColor.b + ", 1.0)";
+
+		context.wrapText(message, size / 2, size / 2, 10000, fontsize);
+
+		var texture = new THREE.Texture(canvas);
+		texture.needsUpdate = true;
+
+		var spriteMaterial = new THREE.SpriteMaterial({
+			map: texture,
+			transparent: true
+		});
+
+		var sprite = new THREE.Sprite(spriteMaterial);
+
+
+		return sprite;
+	}
+	
+	function updateScore(){
+	 sceneOrtho.remove(scoreSprite);
+					scoreSprite = makeTextSprite("Score: "+playerScore +"         Opponent: "+opponentScore, {
+						backgroundColor: {
+							r: 11,
+							g: 62,
+							b: 111,
+							a: 0
+						},
+						textColor: {
+							r: 246,
+							g: 246,
+							b: 246,
+							a: 1
+						}
+					});
+					scoreSprite.scale.set(700, 700, 1);
+					scoreSprite.position.z = 0;
+					scoreSprite.position.x = -300;
+					scoreSprite.position.y = -300;
+					sceneOrtho.add(scoreSprite);
+	
+	}
+	
+	
 
 		</script>
 
