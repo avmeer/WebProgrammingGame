@@ -50,6 +50,11 @@
 			var mouse = new THREE.Vector2(),
 			offset = new THREE.Vector3(),
 			INTERSECTED, SELECTED;
+			
+			var blip = new Audio('blip.mp3');
+			var wall = new Audio('wall.wav');
+			var laser = new Audio('laser.wav');
+			
 
 			init();
 			animate();
@@ -352,25 +357,30 @@
 				
 				if (intersectsWith(ball,playerPaddle) || intersectsWith(ball,opponentPaddle)){
 					ballVz=-ballVz;
+					blip.play();
 				}
 
 
 				//keep the ball in the bounding box
 				if(ball.position.x+ballRadius>=edgeSize){
 					ballVx=-ballVx;
+					wall.play();
 				}
 
 				if(ball.position.y+ballRadius>=edgeSize){
 					ballVy=-ballVy;
+					wall.play();
 				}
 
 
 				if(ball.position.x-ballRadius<=-edgeSize){
 					ballVx=-ballVx;
+					wall.play();
 				}
 
 				if(ball.position.y-ballRadius<=-edgeSize){
 					ballVy=-ballVy;
+					wall.play();
 				}
 
 				if(ball.position.z>playerPaddle.position.z+ballRadius+10){
@@ -383,6 +393,7 @@
 					ballVy=getRandomInt(-15,15);
 					ballVx=getRandomInt(-15,15);
 					ballStopped=true;
+					laser.play();
 				}
 				
 				if(ball.position.z<opponentPaddle.position.z-ballRadius){
@@ -397,6 +408,7 @@
 					ballVz=getRandomInt(10,15);
 					ballVy=getRandomInt(-15,15);
 					ballVx=getRandomInt(-15,15);
+					laser.play();
 				}
 
 
