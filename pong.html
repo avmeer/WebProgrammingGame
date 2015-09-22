@@ -379,7 +379,7 @@
 					ball.position.z=playerPaddle.position.z-ballRadius;
 					ball.position.x=playerPaddle.position.x;
 					ball.position.y=playerPaddle.position.y;
-					ballVz=getRandomInt(5,15);
+					ballVz=-getRandomInt(10,15);
 					ballVy=getRandomInt(-15,15);
 					ballVx=getRandomInt(-15,15);
 					ballStopped=true;
@@ -394,7 +394,7 @@
 					ball.position.y=opponentPaddle.position.y;
 					
 					
-					ballVz=-getRandomInt(5,15);
+					ballVz=getRandomInt(10,15);
 					ballVy=getRandomInt(-15,15);
 					ballVx=getRandomInt(-15,15);
 				}
