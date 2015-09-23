@@ -55,11 +55,20 @@
 			var wall = new Audio('wall.wav');
 			var laser = new Audio('laser.wav');
 			
+			var backgroundMusic = new Audio('backgroundMusic.wav'); 
+		
+			
 
 			init();
 			animate();
 
 			function init() {
+			
+				backgroundMusic.addEventListener('ended', function() {
+					this.currentTime = 0;
+					this.play();
+				}, false);
+				backgroundMusic.play();
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
