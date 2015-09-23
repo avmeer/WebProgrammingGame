@@ -1,0 +1,599 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Super awesome game</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="three.js"></script>
+
+		<script src="controls/TrackballControls.js"></script>
+
+		<script src="libs/stats.min.js"></script>
+
+		<script>
+
+			var container, stats;
+			var camera, controls, scene, renderer,cameraOrtho;
+			var sceneOrtho = new THREE.Scene();
+			var objects = [], plane;
+			
+			var scoreSprite;
+
+			var ball;
+			var playerPaddle;
+			var opponentPaddle;
+			var ballStopped=true;
+			
+			var playerScore=0, opponentScore=0;
+
+			var paddleWidth= 400, paddleLength=200, paddleDepth=3;
+			
+			
+			var ballVx=getRandomInt(-15,15), ballVy=getRandomInt(-15,15), ballVz=-10;
+			var ballRadius=100;
+
+			var edgeSize = 1500;
+
+			var raycaster = new THREE.Raycaster();
+			var mouse = new THREE.Vector2(),
+			offset = new THREE.Vector3(),
+			INTERSECTED, SELECTED;
+			
+			var blip = new Audio('blip.mp3');
+			var wall = new Audio('wall.wav');
+			var laser = new Audio('laser.wav');
+			
+			var backgroundMusic = new Audio('backgroundMusic.wav'); 
+		
+			
+
+			init();
+			animate();
+
+			function init() {
+			
+				backgroundMusic.addEventListener('ended', function() {
+					this.currentTime = 0;
+					this.play();
+				}, false);
+				backgroundMusic.play();
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z =3400;
+
+				controls = new THREE.TrackballControls( camera );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.noZoom = false;
+				controls.noPan = false;
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+				
+				
+				
+				cameraOrtho = new THREE.OrthographicCamera(
+				window.innerWidth / -2,
+				window.innerWidth / 2,
+				window.innerHeight / 2,
+				window.innerHeight / -2,
+				1,
+				1000);
+				cameraOrtho.position.z = 1;
+				cameraOrtho.position.x = 0;
+				cameraOrtho.position.y = 0;
+
+
+				scene = new THREE.Scene();
+
+				scene.add( new THREE.AmbientLight( 0x505050 ) );
+
+				var light = new THREE.SpotLight( 0xffffff, 1.5 );
+				light.position.set( 0, 500, 2000 );
+				light.castShadow = true;
+
+				light.shadowCameraNear = 200;
+				light.shadowCameraFar = camera.far;
+				light.shadowCameraFov = 50;
+
+				light.shadowBias = -0.00022;
+				light.shadowDarkness = 0.5;
+
+				light.shadowMapWidth = 2048;
+				light.shadowMapHeight = 2048;
+
+				scene.add( light );
+
+				var geometry = new THREE.BoxGeometry( paddleWidth, paddleLength, paddleDepth );
+
+				playerPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0xff0000, opacity: 0.7, transparent: true } ) );
+
+				opponentPaddle = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: 0x0066ff } ) );
+
+				playerPaddle.castShadow = true;
+				playerPaddle.receiveShadow = true;
+				playerPaddle.geometry.computeBoundingBox ();
+
+				playerPaddle.sizeX = paddleWidth/2;
+				playerPaddle.sizeY = paddleLength/2;
+				playerPaddle.sizeZ = paddleDepth/2;
+
+				opponentPaddle.position.z=-3000;
+
+				opponentPaddle.sizeX = paddleWidth/2;
+				opponentPaddle.sizeY = paddleLength/2;
+				opponentPaddle.sizeZ = paddleDepth/2;
+
+				scene.add( playerPaddle );
+				scene.add( opponentPaddle );
+
+				objects.push( playerPaddle );
+
+
+				plane = new THREE.Mesh(
+					new THREE.PlaneBufferGeometry( 2500, 2500, 8, 8 ),
+					new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
+				);
+				plane.visible = false;
+
+
+				//Draw the playing field lines
+
+				var material = new THREE.LineBasicMaterial({
+					color: 0x0000ff
+				});
+
+				var geometry = new THREE.Geometry();
+					geometry.vertices.push(
+						new THREE.Vector3( -edgeSize, -edgeSize, -edgeSize ),
+						new THREE.Vector3( edgeSize, -edgeSize, -edgeSize ),
+						new THREE.Vector3( edgeSize, edgeSize, -edgeSize ),
+						new THREE.Vector3( -edgeSize, edgeSize, -edgeSize ),
+						new THREE.Vector3( -edgeSize, -edgeSize, -edgeSize )
+				);
+
+				for(var i=0;i<30;i++){
+					
+
+					var line = new THREE.Line( geometry, material );
+					line.position.z=(-i*70) +1000;
+					scene.add( line );
+				}
+
+				scene.add( plane );
+				
+				updateScore();
+
+
+				var geometry = new THREE.SphereGeometry( ballRadius, 32, 32 );
+				//var geometry = new THREE.BoxGeometry( ballRadius, ballRadius,ballRadius );
+				var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+				ball = new THREE.Mesh( geometry, material );
+				ball.position.x = 0;
+				ball.position.y= 0;
+				ball.position.z=-500;
+				ball.sizeX = ballRadius/2;
+				ball.sizeY = ballRadius/2;
+				ball.sizeZ = ballRadius/2;
+				scene.add( ball );
+
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setClearColor( 0xf0f0f0 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.sortObjects = true;
+
+				renderer.shadowMapEnabled = true;
+				renderer.autoClear = false;
+				renderer.shadowMapType = THREE.PCFShadowMap;
+
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild( stats.domElement );
+
+				renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+				renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+
+				var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+				var intersects = raycaster.intersectObjects( objects );
+
+				if ( intersects.length > 0 ) {
+
+					controls.enabled = false;
+
+					SELECTED = intersects[ 0 ].object;
+
+					var intersects = raycaster.intersectObject( plane );
+					offset.copy( intersects[ 0 ].point ).sub( plane.position );
+				}
+
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				
+				cameraOrtho.left = -window.innerWidth / 2;
+				cameraOrtho.right = window.innerWidth / 2;
+				cameraOrtho.top = window.innerHeight / 2;
+				cameraOrtho.bottom = -window.innerHeight / 2;
+
+				cameraOrtho.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				event.preventDefault();
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+				//
+
+				raycaster.setFromCamera( mouse, camera );
+
+				if ( SELECTED ) {
+
+					var intersects = raycaster.intersectObject( plane );
+					SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+					return;
+
+				}
+
+				var intersects = raycaster.intersectObjects( objects );
+
+				if ( intersects.length > 0 ) {
+
+					if ( INTERSECTED != intersects[ 0 ].object ) {
+
+						if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+						INTERSECTED = intersects[ 0 ].object;
+						INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+
+						plane.position.copy( INTERSECTED.position );
+						plane.lookAt( camera.position );
+
+					}
+
+					container.style.cursor = 'pointer';
+
+				} else {
+
+					if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+					INTERSECTED = null;
+
+					container.style.cursor = 'auto';
+
+				}
+
+			}
+
+			function onDocumentMouseDown( event ) {
+				ballStopped=false;
+				event.preventDefault();
+
+			}
+
+			function onDocumentMouseUp( event ) {
+
+				event.preventDefault();
+				/*
+				controls.enabled = true;
+
+				if ( INTERSECTED ) {
+
+					plane.position.copy( INTERSECTED.position );
+
+					SELECTED = null;
+
+				}
+
+				container.style.cursor = 'auto';*/
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				
+				if(!ballStopped){
+					ball.position.z+=ballVz;
+					ball.position.x+=ballVx;
+					ball.position.y+=ballVy;
+				}
+				else{
+					ball.position.z=playerPaddle.position.z-ballRadius-5;
+					ball.position.x=playerPaddle.position.x;
+					ball.position.y=playerPaddle.position.y;
+				}
+				
+				if(ball.position.x>opponentPaddle.position.x)
+					opponentPaddle.position.x+=getRandomInt(5,10);
+				else{
+					opponentPaddle.position.x-=getRandomInt(5,10);
+				}
+				if(ball.position.y>opponentPaddle.position.y)
+					opponentPaddle.position.y+=getRandomInt(5,10);
+				else{
+					opponentPaddle.position.y-=getRandomInt(5,10);
+				}
+
+				var ballPoint = new THREE.Vector3(ball.position.x,ball.position.y,ball.position.z+ballRadius);
+
+				/*if(ballPoint.x<playerPaddle.position.x+paddleWidth
+					&& ballPoint.x>playerPaddle.position.x
+					&&ballPoint.y<playerPaddle.position.y+paddleLength
+					&& ballPoint.y>playerPaddle.position.y
+					&&ballPoint.z>playerPaddle.position.z){
+					ballVz=-ballVz;
+				}*/
+				
+				if (intersectsWith(ball,playerPaddle) || intersectsWith(ball,opponentPaddle)){
+					ballVz=-ballVz;
+					blip.play();
+				}
+
+
+				//keep the ball in the bounding box
+				if(ball.position.x+ballRadius>=edgeSize){
+					ballVx=-ballVx;
+					wall.play();
+				}
+
+				if(ball.position.y+ballRadius>=edgeSize){
+					ballVy=-ballVy;
+					wall.play();
+				}
+
+
+				if(ball.position.x-ballRadius<=-edgeSize){
+					ballVx=-ballVx;
+					wall.play();
+				}
+
+				if(ball.position.y-ballRadius<=-edgeSize){
+					ballVy=-ballVy;
+					wall.play();
+				}
+
+				if(ball.position.z>playerPaddle.position.z+ballRadius+10){
+					opponentScore++;
+					updateScore();
+					ball.position.z=playerPaddle.position.z-ballRadius;
+					ball.position.x=playerPaddle.position.x;
+					ball.position.y=playerPaddle.position.y;
+					ballVz=-getRandomInt(10,15);
+					ballVy=getRandomInt(-15,15);
+					ballVx=getRandomInt(-15,15);
+					ballStopped=true;
+					laser.play();
+				}
+				
+				if(ball.position.z<opponentPaddle.position.z-ballRadius){
+					playerScore++;
+					updateScore();
+					
+					ball.position.z=opponentPaddle.position.z+ballRadius+30;
+					ball.position.x=opponentPaddle.position.x;
+					ball.position.y=opponentPaddle.position.y;
+					
+					
+					ballVz=getRandomInt(10,15);
+					ballVy=getRandomInt(-15,15);
+					ballVx=getRandomInt(-15,15);
+					laser.play();
+				}
+
+
+				render();
+				stats.update();
+
+			}
+
+			function render() {
+
+				controls.update();
+
+				renderer.render( scene, camera );
+				renderer.render(sceneOrtho, cameraOrtho);
+
+			}
+
+
+			function intersectsWith(a,b) {
+
+
+		     //check the X axis
+			   if(Math.abs(a.position.x - b.position.x) < a.sizeX + b.sizeX)
+			   {
+			      //check the Y axis
+			      if(Math.abs(a.position.y - b.position.y) < a.sizeY + b.sizeY)
+			      {
+			          //check the Z axis
+			          if(Math.abs(a.position.z - b.position.z) < a.sizeZ + b.sizeZ)
+			          {
+			             return true;
+			          }
+			      }
+			   }
+
+			   return false;
+		}
+		
+		function getRandomInt(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+		
+		
+		function makeTextSprite(message, parameters) {
+		
+			function wrapText(text, x, y, maxWidth, lineHeight) {
+			var lines = text.split("\n");
+
+			for (var i = 0; i < lines.length; i++) {
+				var words = lines[i].split(' ');
+				var line = '';
+
+				for (var n = 0; n < words.length; n++) {
+					var testLine = line + words[n] + ' ';
+					var metrics = this.measureText(testLine);
+					var testWidth = metrics.width;
+
+					if (testWidth > maxWidth && n > 0) {
+						this.fillText(line, x, y);
+						line = words[n] + ' ';
+						y += lineHeight;
+					} else {
+						line = testLine;
+					}
+				}
+
+				this.fillText(line, x, y);
+				y += lineHeight;
+			}
+		}
+		// Need this function for creating multi-line text sprites.
+		CanvasRenderingContext2D.prototype.wrapText = wrapText;
+		
+		
+		
+		
+		if (parameters === undefined) parameters = {};
+		var fontface = parameters.hasOwnProperty("fontface") ?
+			parameters["fontface"] : "Arial";
+		var fontsize = parameters.hasOwnProperty("fontsize") ?
+			parameters["fontsize"] : 30;
+		var size = parameters.hasOwnProperty("size") ?
+			parameters["size"] : 1024;
+		var textColor = parameters.hasOwnProperty("textColor") ?
+			parameters["textColor"] : {
+				r: 0,
+				g: 0,
+				b: 0,
+				a: 1.0
+			};
+		var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+			parameters["backgroundColor"] : {
+				r: 255,
+				g: 250,
+				b: 200,
+				a: 0.8
+			};
+
+		var canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		var context = canvas.getContext('2d');
+		context.font = fontsize + "px " + fontface;
+
+		// Draw background rectangle
+		//find the size of our text to draw the rectangle around
+		var lines = message.split("\n");
+		var lineHeight = fontsize;
+		var maxTextWidth = 0;
+		lines.forEach(function (line) {
+			var textWidth = context.measureText(line).width;
+			if (textWidth > maxTextWidth) {
+				maxTextWidth = textWidth;
+			}
+		});
+		//set the color to the input
+		context.fillStyle = "rgba(" +
+			backgroundColor.r + "," +
+			backgroundColor.g + "," +
+			backgroundColor.b + "," +
+			backgroundColor.a + ")";
+
+		context.fillRect(0.5 * size - 15,
+			0.5 * size - fontsize - 15,
+			maxTextWidth + 30,
+			lines.length * lineHeight + 30);
+
+		context.textAlign = 'left';
+		context.fillStyle = "rgba(" +
+			textColor.r + ", " +
+			textColor.g + ", " +
+			textColor.b + ", 1.0)";
+
+		context.wrapText(message, size / 2, size / 2, 10000, fontsize);
+
+		var texture = new THREE.Texture(canvas);
+		texture.needsUpdate = true;
+
+		var spriteMaterial = new THREE.SpriteMaterial({
+			map: texture,
+			transparent: true
+		});
+
+		var sprite = new THREE.Sprite(spriteMaterial);
+
+
+		return sprite;
+	}
+	
+	function updateScore(){
+	 sceneOrtho.remove(scoreSprite);
+					scoreSprite = makeTextSprite("Score: "+playerScore +"         Opponent: "+opponentScore, {
+						backgroundColor: {
+							r: 11,
+							g: 62,
+							b: 111,
+							a: 0
+						},
+						textColor: {
+							r: 246,
+							g: 246,
+							b: 246,
+							a: 1
+						}
+					});
+					scoreSprite.scale.set(700, 700, 1);
+					scoreSprite.position.z = 0;
+					scoreSprite.position.x = -300;
+					scoreSprite.position.y = -300;
+					sceneOrtho.add(scoreSprite);
+	
+	}
+	
+	
+
+		</script>
+
+	</body>
+</html>
